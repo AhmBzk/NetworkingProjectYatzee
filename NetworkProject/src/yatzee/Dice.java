@@ -1,0 +1,24 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package yatzee;
+
+import java.util.Random;
+
+/**
+ *
+ * @author Ahmet
+ */
+public class Dice {
+    private int value;
+    private static final Random rand = new Random();
+
+    public void dThrow() {
+        value = rand.nextInt(6) + 1;
+    }
+
+    public int getValue() {
+        return value;
+    }
+}
