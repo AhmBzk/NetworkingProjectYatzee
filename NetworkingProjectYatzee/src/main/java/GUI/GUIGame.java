@@ -59,7 +59,7 @@ public class GUIGame extends javax.swing.JFrame {
                 return;
             }
 
-            if (rerollCount >= 2) {
+            if (rerollCount >= 3) {
                 JOptionPane.showMessageDialog(this, "You have used all re-roll chances.");
                 return;
             }
@@ -80,7 +80,9 @@ public class GUIGame extends javax.swing.JFrame {
     private void highlightPossibleScores() {
         int[] points = new ScoresTable().getAllPoints(diceValues);
         int playerColumn = playerName.compareTo(opponentName) < 0 ? 1 : 2;
-
+        for(int point : points){
+        System.out.println(point);
+        }
         for (int row = 0; row < 13; row++) {
             Object value = jTable1.getValueAt(row, playerColumn);
             if (value == null && points[row] > 0) {
@@ -128,12 +130,12 @@ public class GUIGame extends javax.swing.JFrame {
             return;
         }
 
-        jTable1.setValueAt("✓ " + val, row, playerColumn);
+        jTable1.setValueAt("# " + val, row, playerColumn);
 
         for (int r = 0; r < 13; r++) {
             if (r != row) {
                 Object otherVal = jTable1.getValueAt(r, playerColumn);
-                if (otherVal != null && !otherVal.toString().startsWith("✓")) {
+                if (otherVal != null && !otherVal.toString().startsWith("#")) {
                     jTable1.setValueAt(null, r, playerColumn);
                 }
             }
@@ -148,7 +150,7 @@ public class GUIGame extends javax.swing.JFrame {
 
         if (isGameOver()) {
             int total = calculateTotalScore();
-            jTable1.setValueAt("✓ " + total, 14, playerColumn);
+            jTable1.setValueAt("# " + total, 14, playerColumn);
             client.send("GAME_OVER " + total);
             jButton1.setEnabled(false);
             jTable1.setEnabled(false);
@@ -162,7 +164,7 @@ public class GUIGame extends javax.swing.JFrame {
         int filled = 0;
         for (int row = 0; row < 13; row++) {
             Object val = jTable1.getValueAt(row, playerColumn);
-            if (val != null && val.toString().startsWith("✓")) {
+            if (val != null && val.toString().startsWith("#")) {
                 filled++;
             }
         }
@@ -174,9 +176,9 @@ public class GUIGame extends javax.swing.JFrame {
         int total = 0;
         for (int row = 0; row < 13; row++) {
             Object val = jTable1.getValueAt(row, playerColumn);
-            if (val != null && val.toString().startsWith("✓")) {
+            if (val != null && val.toString().startsWith("#")) {
                 try {
-                    total += Integer.parseInt(val.toString().replace("✓", "").trim());
+                    total += Integer.parseInt(val.toString().replace("#", "").trim());
                 } catch (NumberFormatException ignored) {
                 }
             }

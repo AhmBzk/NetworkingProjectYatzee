@@ -15,6 +15,8 @@ public enum ScoreCategory {
     FOURS(3, "Fours"),
     FIVES(4, "Fives"),
     SIXES(5, "Sixes"),
+    //bonus -> 6
+    //sum -> 7
     THREE_OF_A_KIND(6, "Three of a Kind"),
     FOUR_OF_A_KIND(7, "Four of a Kind"),
     FULL_HOUSE(8, "Full House"),
