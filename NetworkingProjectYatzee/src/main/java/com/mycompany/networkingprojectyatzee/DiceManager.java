@@ -4,10 +4,22 @@
  */
 package com.mycompany.networkingprojectyatzee;
 
+import java.util.Random;
+
 /**
  *
  * @author Ahmet
  */
 public class DiceManager {
-    
+
+    private int value;
+    private static final Random rand = new Random();
+
+    public void dThrow() {
+        value = rand.nextInt(6) + 1;
+    }
+
+    public int getValue() {
+        return value;
+    }
 }
