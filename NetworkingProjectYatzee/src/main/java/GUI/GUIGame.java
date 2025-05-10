@@ -4,6 +4,16 @@
  */
 package GUI;
 
+import java.awt.Color;
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.JToggleButton;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
+import server.MessageClient;
+import yatzee.ScoresTable;
+
 /**
  *
  * @author Ahmet
@@ -13,8 +23,193 @@ public class GUIGame extends javax.swing.JFrame {
     /**
      * Creates new form GUIGame
      */
-    public GUIGame() {
+    private final MessageClient client;
+    private final String playerName;
+    private final String opponentName;
+    private int[] diceValues = new int[5];
+    private int rerollCount = 0;
+    private final JToggleButton[] diceButtons;
+
+    public GUIGame(MessageClient client, String playerName, String opponentName) {
+        this.client = client;
+        this.playerName = playerName;
+        this.opponentName = opponentName;
+
         initComponents();
+
+        diceButtons = new JToggleButton[]{Dice1, Dice2, Dice3, Dice4, Dice5};
+
+        setTitle("Yahtzee vs " + opponentName);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setVisible(true);
+
+        setupRollButton();
+        setupScoreTableClick();
+        client.setGameUI(this);
+    }
+
+    private int getPlayerColumn() {
+        return playerName.compareTo(opponentName) < 0 ? 1 : 2;
+    }
+
+    private void setupRollButton() {
+        jButton1.addActionListener(e -> {
+            if (!client.isMyTurn()) {
+                JOptionPane.showMessageDialog(this, "It's not your turn!");
+                return;
+            }
+
+            if (rerollCount >= 2) {
+                JOptionPane.showMessageDialog(this, "You have used all re-roll chances.");
+                return;
+            }
+
+            for (int i = 0; i < diceButtons.length; i++) {
+                if (!diceButtons[i].isSelected()) {
+                    diceValues[i] = (int) (Math.random() * 6) + 1;
+                    diceButtons[i].setText(String.valueOf(diceValues[i]));
+                }
+            }
+
+            rerollCount++;
+            jButton1.setText("RE-ROLL (" + (3 - rerollCount) + ")");
+            highlightPossibleScores();
+        });
+    }
+
+    private void highlightPossibleScores() {
+        int[] points = new ScoresTable().getAllPoints(diceValues);
+        int playerColumn = playerName.compareTo(opponentName) < 0 ? 1 : 2;
+
+        for (int row = 0; row < 13; row++) {
+            Object value = jTable1.getValueAt(row, playerColumn);
+            if (value == null && points[row] > 0) {
+                jTable1.setValueAt(points[row], row, playerColumn);
+            }
+        }
+
+        TableCellRenderer redRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                Object cellVal = jTable1.getValueAt(row, column);
+                boolean isPermanent = cellVal != null && cellVal.toString().startsWith("✓");
+
+                if (column == playerColumn && row < 13 && value != null && !isPermanent) {
+                    c.setForeground(Color.RED);
+                } else {
+                    c.setForeground(Color.BLACK);
+                }
+                return c;
+            }
+        };
+        jTable1.getColumnModel().getColumn(playerColumn).setCellRenderer(redRenderer);
+    }
+
+    private void setupScoreTableClick() {
+        jTable1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                int row = jTable1.rowAtPoint(evt.getPoint());
+                int col = jTable1.columnAtPoint(evt.getPoint());
+                int myCol = playerName.equals("Player 1") ? 1 : 2;
+
+                if (col == myCol) {
+                    lockScore(row);
+                }
+            }
+        });
+    }
+
+    private void lockScore(int row) {
+        int playerColumn = playerName.equals("Player 1") ? 1 : 2;
+        Object val = jTable1.getValueAt(row, playerColumn);
+        if (val == null) {
+            return;
+        }
+
+        jTable1.setValueAt("✓ " + val, row, playerColumn);
+
+        for (int r = 0; r < 13; r++) {
+            if (r != row) {
+                Object otherVal = jTable1.getValueAt(r, playerColumn);
+                if (otherVal != null && !otherVal.toString().startsWith("✓")) {
+                    jTable1.setValueAt(null, r, playerColumn);
+                }
+            }
+        }
+
+        rerollCount = 0;
+        jButton1.setText("ROLL");
+        for (JToggleButton btn : diceButtons) {
+            btn.setSelected(false);
+            btn.setText("Dice");
+        }
+
+        if (isGameOver()) {
+            int total = calculateTotalScore();
+            jTable1.setValueAt("✓ " + total, 14, playerColumn);
+            client.send("GAME_OVER " + total);
+            jButton1.setEnabled(false);
+            jTable1.setEnabled(false);
+        } else {
+            client.send("SCORE_LOCKED " + row);
+        }
+    }
+
+    private boolean isGameOver() {
+        int playerColumn = playerName.equals("Player 1") ? 1 : 2;
+        int filled = 0;
+        for (int row = 0; row < 13; row++) {
+            Object val = jTable1.getValueAt(row, playerColumn);
+            if (val != null && val.toString().startsWith("✓")) {
+                filled++;
+            }
+        }
+        return filled == 13;
+    }
+
+    private int calculateTotalScore() {
+        int playerColumn = playerName.equals("Player 1") ? 1 : 2;
+        int total = 0;
+        for (int row = 0; row < 13; row++) {
+            Object val = jTable1.getValueAt(row, playerColumn);
+            if (val != null && val.toString().startsWith("✓")) {
+                try {
+                    total += Integer.parseInt(val.toString().replace("✓", "").trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return total;
+    }
+
+    public void showResultPopup(String result, String score) {
+        SwingUtilities.invokeLater(() -> {
+            String message = switch (result) {
+                case "WIN" ->
+                    "You won! Your score: " + score;
+                case "LOSE" ->
+                    "You lost! Opponent's score: " + score;
+                default ->
+                    "It's a draw! Score: " + score;
+            };
+
+            int option = JOptionPane.showConfirmDialog(
+                    this,
+                    message + "\nDo you want to play again?",
+                    "Game Over",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+            if (option == JOptionPane.YES_OPTION) {
+                client.send("RESTART");
+                dispose();
+                new WaitingRoom();
+            } else {
+                System.exit(0);
+            }
+        });
     }
 
     /**
@@ -55,6 +250,7 @@ public class GUIGame extends javax.swing.JFrame {
                 {"Small straight", null, null},
                 {"Large straight", null, null},
                 {"Chance", null, null},
+                {"Yathzee", null, null},
                 {"Total", null, null}
             },
             new String [] {
@@ -93,8 +289,6 @@ public class GUIGame extends javax.swing.JFrame {
 
         jButton1.setText("ROLL");
         getContentPane().add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 500, -1, -1));
-
-        jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/GUI/table2.jpg"))); // NOI18N
         getContentPane().add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 780, 620));
 
         pack();
@@ -103,37 +297,6 @@ public class GUIGame extends javax.swing.JFrame {
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(GUIGame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(GUIGame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(GUIGame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(GUIGame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new GUIGame().setVisible(true);
-            }
-        });
-    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JToggleButton Dice1;

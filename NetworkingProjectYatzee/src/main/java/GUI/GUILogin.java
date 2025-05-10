@@ -4,17 +4,55 @@
  */
 package GUI;
 
+import java.io.IOException;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import server.MessageClient;
+import server.*;
+import yatzee.*;
+
 /**
  *
  * @author Ahmet
  */
-public class GUILogin extends javax.swing.JFrame {
+public class GUILogin extends JFrame {
 
-    /**
-     * Creates new form GUI
-     */
+    private MessageClient client;
+
     public GUILogin() {
         initComponents();
+
+        try {
+            client = new MessageClient("localhost", this);
+        } catch (IOException e) {
+            jLabel1.setText("Server connection failed.");
+        }
+
+        setVisible(true);
+    }
+
+    public void requestName() {
+        SwingUtilities.invokeLater(() -> jLabel1.setText("Please enter your name"));
+    }
+
+    public void nameTaken() {
+        SwingUtilities.invokeLater(() -> jLabel1.setText("Name taken. Try another."));
+    }
+
+    public void nameAccepted() {
+        SwingUtilities.invokeLater(() -> jLabel1.setText("Name accepted. Waiting for opponent..."));
+    }
+
+    public void startGame(String opponentName, String myName) {
+        SwingUtilities.invokeLater(() -> {
+            new GUIGame(client, myName, opponentName);
+            this.dispose();
+        });
     }
 
     /**
@@ -85,7 +123,7 @@ public class GUILogin extends javax.swing.JFrame {
     }//GEN-LAST:event_jTextField1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        System.out.println(jTextField1.getText());
+        client.sendName((jTextField1.getText()).trim());;
     }//GEN-LAST:event_jButton2ActionPerformed
 
     /**
@@ -115,13 +153,8 @@ public class GUILogin extends javax.swing.JFrame {
         }
         //</editor-fold>
         //</editor-fold>
+        SwingUtilities.invokeLater(() -> new GUILogin().setVisible(true));
 
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new GUILogin().setVisible(true);
-            }
-        });
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
