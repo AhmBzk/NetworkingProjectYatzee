@@ -17,6 +17,7 @@ import java.util.Set;
  * @author Ahmet
  */
 public class MessageServer {
+
     private static final int PORT = 5000;
     private static final Set<String> playerNames = new HashSet<>();
     private static final Queue<PlayerHandler> waitingPlayers = new LinkedList<>();
@@ -40,8 +41,13 @@ public class MessageServer {
     }
 
     public static synchronized void registerPlayer(PlayerHandler player) {
-        playerNames.add(player.getPlayerName());
+        // only add the new comer
+        if (!playerNames.contains(player.getPlayerName())) {
+            playerNames.add(player.getPlayerName());
+        }
+
         waitingPlayers.add(player);
+
         if (waitingPlayers.size() >= 2) {
             PlayerHandler p1 = waitingPlayers.poll();
             PlayerHandler p2 = waitingPlayers.poll();

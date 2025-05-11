@@ -23,7 +23,7 @@ import yatzee.*;
 public class GUILogin extends JFrame {
 
     private MessageClient client;
-
+    private WaitingRoom waitingRoom;
     public GUILogin() {
         initComponents();
 
@@ -48,11 +48,17 @@ public class GUILogin extends JFrame {
         SwingUtilities.invokeLater(() -> jLabel1.setText("Name accepted. Waiting for opponent..."));
     }
 
-    public void startGame(String opponentName, String myName) {
-        SwingUtilities.invokeLater(() -> {
-            new GUIGame(client, myName, opponentName);
-            this.dispose();
-        });
+    public void showWaitingRoom() {
+        waitingRoom = new WaitingRoom();  // henüz çağırma kısmı implement edilmedi
+    }
+
+    public void startGame(String opponentName, String playerName) {
+        if (waitingRoom != null) {
+            waitingRoom.dispose();  // hala implement edilmedi
+            waitingRoom = null;
+        }
+        GUIGame game = new GUIGame(client, playerName, opponentName);
+        this.setVisible(false); // closing the login screen
     }
 
     /**
@@ -123,7 +129,7 @@ public class GUILogin extends JFrame {
     }//GEN-LAST:event_jTextField1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        client.sendName((jTextField1.getText()).trim());;
+        client.sendName((jTextField1.getText()).trim());
     }//GEN-LAST:event_jButton2ActionPerformed
 
     /**

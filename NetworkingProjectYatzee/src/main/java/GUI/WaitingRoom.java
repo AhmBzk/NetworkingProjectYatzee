@@ -17,7 +17,7 @@ public class WaitingRoom extends JFrame {
         setTitle("Waiting Room");
         setSize(300, 100);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        //setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         JLabel label = new JLabel("Waiting for opponent...", SwingConstants.CENTER);
         add(label);

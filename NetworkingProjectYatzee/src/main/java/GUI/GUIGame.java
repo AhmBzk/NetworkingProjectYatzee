@@ -43,14 +43,25 @@ public class GUIGame extends javax.swing.JFrame {
         initComponents();
         setTableColumnHeaders();
         diceButtons = new JToggleButton[]{Dice1, Dice2, Dice3, Dice4, Dice5};
-
         setTitle("Yahtzee vs " + opponentName);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setVisible(true);
 
-        setupRollButton();
         setupScoreTableClick();
         client.setGameUI(this);
+        setupDiceToggleMovement();
+        repositionDiceButtons();
+    }
+
+    private void repositionDiceButtons() {
+        for (JToggleButton btn : diceButtons) {
+            if (btn.isSelected()) {
+                btn.setLocation(btn.getX(), 440); 
+            } else {
+                int randomOffset = (int) (Math.random() * 100); 
+                btn.setLocation(btn.getX(), 200 + randomOffset); 
+            }
+        }
     }
 
     private int getPlayerColumn() {
@@ -58,33 +69,44 @@ public class GUIGame extends javax.swing.JFrame {
     }
 
     private void setupRollButton() {
-        jButton1.addActionListener(e -> {
-            if (!client.isMyTurn()) {
-                JOptionPane.showMessageDialog(this, "It's not your turn!");
-                return;
-            }
 
-            if (rerollCount >= 3) {
-                JOptionPane.showMessageDialog(this, "You have used all re-roll chances.");
-                return;
-            }
+        if (!client.isMyTurn()) {
+            JOptionPane.showMessageDialog(this, "It's not your turn!");
+            return;
+        }
 
-            for (int i = 0; i < diceButtons.length; i++) {
-                if (!diceButtons[i].isSelected()) {
-                    diceValues[i] = (int) (Math.random() * 6) + 1;
-                }
-                // her durumda text güncelle
-                diceButtons[i].setText(String.valueOf(diceValues[i]));
-            }
+        if (rerollCount >= 3) {
+            JOptionPane.showMessageDialog(this, "You have used all re-roll chances.");
+            return;
+        }
 
-            rerollCount++;
-            jButton1.setText("RE-ROLL (" + (3 - rerollCount) + ")");
-            highlightPossibleScores();
-        });
+        for (int i = 0; i < diceButtons.length; i++) {
+            if (!diceButtons[i].isSelected() || diceValues[i] == 0) {
+                diceValues[i] = (int) (Math.random() * 6) + 1;
+            }
+            diceButtons[i].setText(String.valueOf(diceValues[i]));
+        }
+
+        
+        rerollCount++;
+        jButton1.setText("RE-ROLL (" + (3 - rerollCount) + ")");
+        highlightPossibleScores();
+
+    }
+
+    private void setupDiceToggleMovement() {
+        for (JToggleButton btn : diceButtons) {
+            if (btn.isSelected()) {
+                btn.setLocation(btn.getX(), 440); // if toggled then move down the dice
+            } else {
+                int randomOffset = (int) (Math.random() * 100); // between 0–100
+                btn.setLocation(btn.getX(), 200 + randomOffset); // move up the buttons
+            }
+        }
     }
 
     public void lockScoreFromServer(int row, String value) {
-        jTable1.setValueAt(Integer.parseInt(value), row, 2); // her zaman ikinci kolona yaz
+        jTable1.setValueAt(Integer.parseInt(value), row, 2); // since the opponent column always the 2nd one
         jTable1.repaint();
     }
 
@@ -152,9 +174,8 @@ public class GUIGame extends javax.swing.JFrame {
     private void lockScore(int row) {
         int playerColumn = getPlayerColumn();
 
-        // 🔐 Sadece seçilebilir hücrelerden biri mi?
         if (!tempRows.contains(row)) {
-            return; // Oyuncu geçersiz/dolu bir hücreye tıklamış demektir
+            return;
         }
 
         Object val = jTable1.getValueAt(row, playerColumn);
@@ -162,7 +183,6 @@ public class GUIGame extends javax.swing.JFrame {
             return;
         }
 
-        // Devam edebiliriz: puan yazımı vs.
         jTable1.setValueAt(val, row, playerColumn);
 
         for (int r : tempRows) {
@@ -222,12 +242,12 @@ public class GUIGame extends javax.swing.JFrame {
             }
         }
 
-        // Tabloyu güncelle
+        // Refresh table
         jTable1.setValueAt(bonus, 6, playerColumn);
         jTable1.setValueAt(upperTotal, 7, playerColumn);
         jTable1.setValueAt(total, 15, playerColumn);
 
-        // Karşı oyuncuya bildir
+        // remind the opponent
         client.send("SCORE_LOCKED 6 " + 2 + " " + bonus);
         client.send("SCORE_LOCKED 7 " + 2 + " " + upperTotal);
         client.send("SCORE_LOCKED 15 " + 2 + " " + total);
@@ -248,7 +268,7 @@ public class GUIGame extends javax.swing.JFrame {
         int total = 0;
         for (int row = 0; row < 15; row++) {
             Object val = jTable1.getValueAt(row, playerColumn);
-            if (val != null) {  // sadece kalıcı puanlar
+            if (val != null) {  // only locked points
                 try {
                     total += Integer.parseInt(val.toString().trim());
                 } catch (NumberFormatException ignored) {
@@ -284,6 +304,20 @@ public class GUIGame extends javax.swing.JFrame {
                 System.exit(0);
             }
         });
+    }
+
+    public void updateOpponentDice(int[] opponentDice) {
+        if (!client.isMyTurn()) {
+            for (int i = 0; i < 5; i++) {
+                diceButtons[i].setText(String.valueOf(opponentDice[i]));
+                diceButtons[i].setSelected(false); // 
+            }
+            javax.swing.Timer timer = new javax.swing.Timer(50, event -> {
+                setupDiceToggleMovement();
+            });
+            timer.setRepeats(false);
+            timer.start();
+        }
     }
 
     private void setTableColumnHeaders() {
@@ -334,7 +368,7 @@ public class GUIGame extends javax.swing.JFrame {
                 {"Total", null, null}
             },
             new String [] {
-                "Title 1", "Player 1", "Player 2"
+                "Yahtzee", "Player 1", "Player 2"
             }
         ) {
             Class[] types = new Class [] {
@@ -375,11 +409,41 @@ public class GUIGame extends javax.swing.JFrame {
         getContentPane().add(Dice5, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 440, 70, -1));
 
         jButton1.setText("ROLL");
+        jButton1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jButton1MouseClicked(evt);
+            }
+        });
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
         getContentPane().add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 500, -1, -1));
         getContentPane().add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 780, 620));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void jButton1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton1MouseClicked
+
+    }//GEN-LAST:event_jButton1MouseClicked
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        setupRollButton();
+
+        javax.swing.Timer timer = new javax.swing.Timer(50, event -> {
+            setupDiceToggleMovement();
+        });
+        timer.setRepeats(false);
+        timer.start();
+
+        StringBuilder sb = new StringBuilder();
+        for (int value : diceValues) {
+            sb.append(value);
+        }
+        client.send("ROLL_DICE " + sb.toString());
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     /**
      * @param args the command line arguments

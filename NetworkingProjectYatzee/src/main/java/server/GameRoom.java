@@ -31,7 +31,7 @@ public class GameRoom implements Runnable {
         player1.sendMessage("START " + player1.getPlayerName() + " " + player2.getPlayerName());
         player2.sendMessage("START " + player2.getPlayerName() + " " + player1.getPlayerName());
 
-        sendTurn();  // 🟢 ilk oyunu başlat
+        sendTurn();  // start the game
         listenForMoves(player1);
         listenForMoves(player2);
     }
@@ -40,7 +40,7 @@ public class GameRoom implements Runnable {
         PlayerHandler nextPlayer = getOtherPlayer(previousPlayer);
         nextPlayer.sendMessage("TURN " + previousPlayer.getPlayerName() + " " + row + " " + value);
         previousPlayer.sendMessage("WAIT");
-        currentPlayer = nextPlayer;  // 🔁 doğru sıradaki oyuncuyu güncelle
+        currentPlayer = nextPlayer;  // whose turn
     }
 
     private void sendTurn() {
@@ -59,12 +59,16 @@ public class GameRoom implements Runnable {
                         int row = Integer.parseInt(parts[1]);
                         String value = parts.length > 3 ? parts[3] : "0";
 
-                        // Ekranları güncelle
+                        // refresh the game screen
                         player.sendMessage("LOCK_SCORE " + row + " " + value);
                         getOtherPlayer(player).sendMessage("OPPONENT_LOCKED " + row + " " + value);
 
-                        //  Sıra değiştir
+                        //  rakip sırası için
                         sendTurn(player, row, Integer.parseInt(value));
+                    } else if (line.startsWith("ROLL_DICE ")) {
+                        // rolling player
+                        String diceValues = line.substring("ROLL_DICE ".length()); 
+                        getOtherPlayer(player).sendMessage("DICE " + diceValues);
                     } else if (line.startsWith("GAME_OVER")) {
                         int score = Integer.parseInt(line.split(" ")[1]);
                         if (player == player1) {
@@ -74,10 +78,10 @@ public class GameRoom implements Runnable {
                         }
 
                         if (player1Score != -1 && player2Score != -1) {
-                            sendGameResult(); // iki oyuncudan da geldiyse karşılaştır
+                            sendGameResult(); // if there are 2 players
                         }
                     } else if (line.equals("RESTART")) {
-                        MessageServer.registerPlayer(player); // tekrar sıraya al
+                        MessageServer.registerPlayer(player); // change the order again
                     }
                 }
             } catch (IOException e) {

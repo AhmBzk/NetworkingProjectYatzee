@@ -10,6 +10,7 @@ import java.net.Socket;
 import GUI.*;
 import java.util.HashMap;
 import java.util.Map;
+import javax.swing.SwingUtilities;
 
 /**
  *
@@ -25,6 +26,7 @@ public class MessageClient {
     private boolean isMyTurn = false;
     private String playerName;
     private final Map<Integer, Object> lastScores = new HashMap<>();
+    private WaitingRoom waitingRoom;
 
     public MessageClient(String serverAddress, GUILogin loginUI) throws IOException {
         this.loginUI = loginUI;
@@ -51,7 +53,7 @@ public class MessageClient {
     }
 
     public void sendName(String name) {
-        this.playerName = name; // oyuncu adı burada kaydediliyor
+        this.playerName = name; 
         out.println(name);
     }
 
@@ -81,7 +83,11 @@ public class MessageClient {
                             if (line.startsWith("START ")) {
                                 String[] tokens = line.split(" ");
                                 String opponent = tokens[1].equals(playerName) ? tokens[2] : tokens[1];
-                                loginUI.startGame(opponent, playerName);  // !
+                                loginUI.startGame(opponent, playerName);  
+                                if (waitingRoom != null) {
+                                    waitingRoom.dispose();
+                                    waitingRoom = null;
+                                }
                             } else if (line.startsWith("TURN ")) {
                                 isMyTurn = true;
 
@@ -103,7 +109,7 @@ public class MessageClient {
                                     int row = Integer.parseInt(parts[1]);
                                     String value = parts[2];
 
-                                    // Sadece kendi ekranında uygula
+                                    // only on the player turn
                                     if (gameUI != null) {
                                         gameUI.lockScoreFromServer(row, value);
                                     }
@@ -116,6 +122,19 @@ public class MessageClient {
                                         gameUI.lockScoreFromServer(row, value);
                                     }
                                 }
+                            } else if (line.equals("RESTART")) {
+                                SwingUtilities.invokeLater(() -> {
+                                    if (waitingRoom == null) {
+                                        waitingRoom = new WaitingRoom();
+                                    }
+                                });
+                            } else if (line.startsWith("DICE ")) {
+                                String diceStr = line.substring(5);
+                                int[] opponentDice = new int[diceStr.length()];
+                                for (int i = 0; i < diceStr.length(); i++) {
+                                    opponentDice[i] = Character.getNumericValue(diceStr.charAt(i));
+                                }
+                                gameUI.updateOpponentDice(opponentDice);
                             }
                         }
                     }
