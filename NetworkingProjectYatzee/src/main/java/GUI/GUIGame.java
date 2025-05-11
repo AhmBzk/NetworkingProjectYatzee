@@ -5,11 +5,14 @@
 package GUI;
 
 import java.awt.Color;
+import java.util.HashSet;
+import java.util.Set;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import server.MessageClient;
 import yatzee.ScoresTable;
@@ -29,6 +32,8 @@ public class GUIGame extends javax.swing.JFrame {
     private int[] diceValues = new int[5];
     private int rerollCount = 0;
     private final JToggleButton[] diceButtons;
+    Set<Integer> tempRows = new HashSet<>();
+    private final Set<Integer> lockedRows = new HashSet<>();
 
     public GUIGame(MessageClient client, String playerName, String opponentName) {
         this.client = client;
@@ -36,7 +41,7 @@ public class GUIGame extends javax.swing.JFrame {
         this.opponentName = opponentName;
 
         initComponents();
-
+        setTableColumnHeaders();
         diceButtons = new JToggleButton[]{Dice1, Dice2, Dice3, Dice4, Dice5};
 
         setTitle("Yahtzee vs " + opponentName);
@@ -49,7 +54,7 @@ public class GUIGame extends javax.swing.JFrame {
     }
 
     private int getPlayerColumn() {
-        return playerName.compareTo(opponentName) < 0 ? 1 : 2;
+        return 1;
     }
 
     private void setupRollButton() {
@@ -67,8 +72,9 @@ public class GUIGame extends javax.swing.JFrame {
             for (int i = 0; i < diceButtons.length; i++) {
                 if (!diceButtons[i].isSelected()) {
                     diceValues[i] = (int) (Math.random() * 6) + 1;
-                    diceButtons[i].setText(String.valueOf(diceValues[i]));
                 }
+                // her durumda text güncelle
+                diceButtons[i].setText(String.valueOf(diceValues[i]));
             }
 
             rerollCount++;
@@ -77,16 +83,37 @@ public class GUIGame extends javax.swing.JFrame {
         });
     }
 
+    public void lockScoreFromServer(int row, String value) {
+        jTable1.setValueAt(Integer.parseInt(value), row, 2); // her zaman ikinci kolona yaz
+        jTable1.repaint();
+    }
+
     private void highlightPossibleScores() {
-        int[] points = new ScoresTable().getAllPoints(diceValues);
-        int playerColumn = playerName.compareTo(opponentName) < 0 ? 1 : 2;
-        for(int point : points){
-        System.out.println(point);
+        int playerColumn = getPlayerColumn();
+
+        for (int r : tempRows) {
+            jTable1.setValueAt(null, r, playerColumn);
         }
-        for (int row = 0; row < 13; row++) {
+        tempRows.clear();
+
+        int[] points = new ScoresTable().getAllPoints(diceValues);
+        boolean atLeastOneSelectable = false;
+
+        for (int row = 0; row <= 14; row++) {
             Object value = jTable1.getValueAt(row, playerColumn);
             if (value == null && points[row] > 0) {
                 jTable1.setValueAt(points[row], row, playerColumn);
+                tempRows.add(row);
+                atLeastOneSelectable = true;
+            }
+        }
+
+        if (!atLeastOneSelectable) {
+            for (int row = 0; row <= 14; row++) {
+                if (jTable1.getValueAt(row, playerColumn) == null) {
+                    jTable1.setValueAt(0, row, playerColumn);
+                    tempRows.add(row);
+                }
             }
         }
 
@@ -95,10 +122,7 @@ public class GUIGame extends javax.swing.JFrame {
             public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
                     boolean hasFocus, int row, int column) {
                 java.awt.Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                Object cellVal = jTable1.getValueAt(row, column);
-                boolean isPermanent = cellVal != null && cellVal.toString().startsWith("✓");
-
-                if (column == playerColumn && row < 13 && value != null && !isPermanent) {
+                if (column == playerColumn && tempRows.contains(row)) {
                     c.setForeground(Color.RED);
                 } else {
                     c.setForeground(Color.BLACK);
@@ -106,7 +130,9 @@ public class GUIGame extends javax.swing.JFrame {
                 return c;
             }
         };
+
         jTable1.getColumnModel().getColumn(playerColumn).setCellRenderer(redRenderer);
+        jTable1.repaint();
     }
 
     private void setupScoreTableClick() {
@@ -114,9 +140,9 @@ public class GUIGame extends javax.swing.JFrame {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 int row = jTable1.rowAtPoint(evt.getPoint());
                 int col = jTable1.columnAtPoint(evt.getPoint());
-                int myCol = playerName.equals("Player 1") ? 1 : 2;
+                int myCol = getPlayerColumn();
 
-                if (col == myCol) {
+                if (col == myCol && row != 6 && row != 7) { // 6: Bonus, 7: Sum
                     lockScore(row);
                 }
             }
@@ -124,61 +150,107 @@ public class GUIGame extends javax.swing.JFrame {
     }
 
     private void lockScore(int row) {
-        int playerColumn = playerName.equals("Player 1") ? 1 : 2;
+        int playerColumn = getPlayerColumn();
+
+        // 🔐 Sadece seçilebilir hücrelerden biri mi?
+        if (!tempRows.contains(row)) {
+            return; // Oyuncu geçersiz/dolu bir hücreye tıklamış demektir
+        }
+
         Object val = jTable1.getValueAt(row, playerColumn);
         if (val == null) {
             return;
         }
 
-        jTable1.setValueAt("# " + val, row, playerColumn);
+        // Devam edebiliriz: puan yazımı vs.
+        jTable1.setValueAt(val, row, playerColumn);
 
-        for (int r = 0; r < 13; r++) {
+        for (int r : tempRows) {
             if (r != row) {
-                Object otherVal = jTable1.getValueAt(r, playerColumn);
-                if (otherVal != null && !otherVal.toString().startsWith("#")) {
-                    jTable1.setValueAt(null, r, playerColumn);
-                }
+                jTable1.setValueAt(null, r, playerColumn);
             }
         }
 
+        client.setLastScoreValue(row, val);
         rerollCount = 0;
         jButton1.setText("ROLL");
+
         for (JToggleButton btn : diceButtons) {
             btn.setSelected(false);
             btn.setText("Dice");
         }
 
+        client.send("SCORE_LOCKED " + row + " " + playerColumn + " " + val);
+
         if (isGameOver()) {
             int total = calculateTotalScore();
-            jTable1.setValueAt("# " + total, 14, playerColumn);
+            jTable1.setValueAt(total, 15, playerColumn);
             client.send("GAME_OVER " + total);
             jButton1.setEnabled(false);
             jTable1.setEnabled(false);
-        } else {
-            client.send("SCORE_LOCKED " + row);
         }
+
+        tempRows.clear();
+        jTable1.repaint();
+        updateSumAndBonus();
+    }
+
+    private void updateSumAndBonus() {
+        int playerColumn = getPlayerColumn();
+
+        int upperTotal = 0;
+        for (int row = 0; row <= 5; row++) {
+            Object val = jTable1.getValueAt(row, playerColumn);
+            if (val != null) {
+                try {
+                    upperTotal += Integer.parseInt(val.toString().trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        int bonus = upperTotal >= 63 ? 35 : 0;
+        int total = upperTotal + bonus;
+
+        for (int row = 8; row <= 14; row++) {
+            Object val = jTable1.getValueAt(row, playerColumn);
+            if (val != null) {
+                try {
+                    total += Integer.parseInt(val.toString().trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        // Tabloyu güncelle
+        jTable1.setValueAt(bonus, 6, playerColumn);
+        jTable1.setValueAt(upperTotal, 7, playerColumn);
+        jTable1.setValueAt(total, 15, playerColumn);
+
+        // Karşı oyuncuya bildir
+        client.send("SCORE_LOCKED 6 " + 2 + " " + bonus);
+        client.send("SCORE_LOCKED 7 " + 2 + " " + upperTotal);
+        client.send("SCORE_LOCKED 15 " + 2 + " " + total);
     }
 
     private boolean isGameOver() {
-        int playerColumn = playerName.equals("Player 1") ? 1 : 2;
-        int filled = 0;
-        for (int row = 0; row < 13; row++) {
-            Object val = jTable1.getValueAt(row, playerColumn);
-            if (val != null && val.toString().startsWith("#")) {
-                filled++;
+        int playerColumn = getPlayerColumn();
+        for (int row = 0; row <= 14; row++) {
+            if (jTable1.getValueAt(row, playerColumn) == null) {
+                return false;
             }
         }
-        return filled == 13;
+        return true;
     }
 
     private int calculateTotalScore() {
-        int playerColumn = playerName.equals("Player 1") ? 1 : 2;
+        int playerColumn = getPlayerColumn();
         int total = 0;
-        for (int row = 0; row < 13; row++) {
+        for (int row = 0; row < 15; row++) {
             Object val = jTable1.getValueAt(row, playerColumn);
-            if (val != null && val.toString().startsWith("#")) {
+            if (val != null) {  // sadece kalıcı puanlar
                 try {
-                    total += Integer.parseInt(val.toString().replace("#", "").trim());
+                    total += Integer.parseInt(val.toString().trim());
                 } catch (NumberFormatException ignored) {
                 }
             }
@@ -212,6 +284,12 @@ public class GUIGame extends javax.swing.JFrame {
                 System.exit(0);
             }
         });
+    }
+
+    private void setTableColumnHeaders() {
+        jTable1.getColumnModel().getColumn(1).setHeaderValue(playerName);
+        jTable1.getColumnModel().getColumn(2).setHeaderValue(opponentName);
+        jTable1.getTableHeader().repaint();
     }
 
     /**
@@ -262,9 +340,16 @@ public class GUIGame extends javax.swing.JFrame {
             Class[] types = new Class [] {
                 java.lang.String.class, java.lang.Integer.class, java.lang.Integer.class
             };
+            boolean[] canEdit = new boolean [] {
+                false, false, false
+            };
 
             public Class getColumnClass(int columnIndex) {
                 return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
             }
         });
         jScrollPane1.setViewportView(jTable1);

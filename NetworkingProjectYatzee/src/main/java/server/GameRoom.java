@@ -31,9 +31,16 @@ public class GameRoom implements Runnable {
         player1.sendMessage("START " + player1.getPlayerName() + " " + player2.getPlayerName());
         player2.sendMessage("START " + player2.getPlayerName() + " " + player1.getPlayerName());
 
-        sendTurn();
+        sendTurn();  // 🟢 ilk oyunu başlat
         listenForMoves(player1);
         listenForMoves(player2);
+    }
+
+    private void sendTurn(PlayerHandler previousPlayer, int row, int value) {
+        PlayerHandler nextPlayer = getOtherPlayer(previousPlayer);
+        nextPlayer.sendMessage("TURN " + previousPlayer.getPlayerName() + " " + row + " " + value);
+        previousPlayer.sendMessage("WAIT");
+        currentPlayer = nextPlayer;  // 🔁 doğru sıradaki oyuncuyu güncelle
     }
 
     private void sendTurn() {
@@ -48,8 +55,16 @@ public class GameRoom implements Runnable {
                 String line;
                 while ((line = in.readLine()) != null) {
                     if (line.startsWith("SCORE_LOCKED")) {
-                        currentPlayer = getOtherPlayer(currentPlayer);
-                        sendTurn();
+                        String[] parts = line.split(" ");
+                        int row = Integer.parseInt(parts[1]);
+                        String value = parts.length > 3 ? parts[3] : "0";
+
+                        // Ekranları güncelle
+                        player.sendMessage("LOCK_SCORE " + row + " " + value);
+                        getOtherPlayer(player).sendMessage("OPPONENT_LOCKED " + row + " " + value);
+
+                        //  Sıra değiştir
+                        sendTurn(player, row, Integer.parseInt(value));
                     } else if (line.startsWith("GAME_OVER")) {
                         int score = Integer.parseInt(line.split(" ")[1]);
                         if (player == player1) {
@@ -59,7 +74,7 @@ public class GameRoom implements Runnable {
                         }
 
                         if (player1Score != -1 && player2Score != -1) {
-                            sendGameResult();
+                            sendGameResult(); // iki oyuncudan da geldiyse karşılaştır
                         }
                     } else if (line.equals("RESTART")) {
                         MessageServer.registerPlayer(player); // tekrar sıraya al

@@ -15,10 +15,12 @@ import java.net.Socket;
  * @author Ahmet
  */
 public class PlayerHandler implements Runnable {
+
     private final Socket socket;
     private BufferedReader in;
     private PrintWriter out;
     private String playerName;
+    private final Object[] lastScores = new Object[15];
 
     public PlayerHandler(Socket socket) {
         this.socket = socket;
@@ -32,6 +34,14 @@ public class PlayerHandler implements Runnable {
         out.println(message);
     }
 
+    public void setLastScoreValue(int row, Object value) {
+        lastScores[row] = value;
+    }
+
+    public Object getLastScoreValue(int row) {
+        return lastScores[row];
+    }
+
     @Override
     public void run() {
         try {
@@ -42,7 +52,9 @@ public class PlayerHandler implements Runnable {
                 out.println("REQUEST_NAME");
                 String name = in.readLine();
 
-                if (name == null || name.isBlank()) continue;
+                if (name == null || name.isBlank()) {
+                    continue;
+                }
 
                 if (MessageServer.isNameTaken(name)) {
                     out.println("NAME_TAKEN");

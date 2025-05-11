@@ -8,6 +8,8 @@ import GUI.GUILogin;
 import java.io.*;
 import java.net.Socket;
 import GUI.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -22,6 +24,7 @@ public class MessageClient {
     private GUIGame gameUI;
     private boolean isMyTurn = false;
     private String playerName;
+    private final Map<Integer, Object> lastScores = new HashMap<>();
 
     public MessageClient(String serverAddress, GUILogin loginUI) throws IOException {
         this.loginUI = loginUI;
@@ -29,6 +32,14 @@ public class MessageClient {
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
         listenToServer();
+    }
+
+    public void setLastScoreValue(int row, Object value) {
+        lastScores.put(row, value);
+    }
+
+    public Object getLastScoreValue(int row) {
+        return lastScores.get(row);
     }
 
     public void setGameUI(GUIGame gameUI) {
@@ -69,19 +80,41 @@ public class MessageClient {
                         default -> {
                             if (line.startsWith("START ")) {
                                 String[] tokens = line.split(" ");
-                                String myName = tokens[1];
-                                String opponent = tokens[2];
-                                this.playerName = myName; 
-                                loginUI.startGame(opponent, myName);
+                                String opponent = tokens[1].equals(playerName) ? tokens[2] : tokens[1];
+                                loginUI.startGame(opponent, playerName);  // !
                             } else if (line.startsWith("TURN ")) {
-                                String turnOwner = line.substring(5);
-                                isMyTurn = turnOwner.equals(playerName);
+                                isMyTurn = true;
+
+                                String[] parts = line.split(" ");
+                                if (parts.length == 4) {
+                                    int row = Integer.parseInt(parts[2]);
+                                    String value = parts[3];
+                                    gameUI.lockScoreFromServer(row, value);
+                                }
                             } else if (line.startsWith("GAME_RESULT")) {
                                 String[] parts = line.split(" ");
                                 String result = parts[1];
                                 String score = parts[2];
+
                                 if (gameUI != null) {
                                     gameUI.showResultPopup(result, score);
+                                } else if (line.startsWith("LOCK_SCORE")) {
+
+                                    int row = Integer.parseInt(parts[1]);
+                                    String value = parts[2];
+
+                                    // Sadece kendi ekranında uygula
+                                    if (gameUI != null) {
+                                        gameUI.lockScoreFromServer(row, value);
+                                    }
+                                } else if (line.startsWith("OPPONENT_LOCKED")) {
+
+                                    int row = Integer.parseInt(parts[1]);
+                                    String value = parts[2];
+
+                                    if (gameUI != null) {
+                                        gameUI.lockScoreFromServer(row, value);
+                                    }
                                 }
                             }
                         }
