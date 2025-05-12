@@ -34,6 +34,7 @@ public class GameRoom implements Runnable {
         sendTurn();  // start the game
         listenForMoves(player1);
         listenForMoves(player2);
+
     }
 
     private void sendTurn(PlayerHandler previousPlayer, int row, int value) {
@@ -41,6 +42,7 @@ public class GameRoom implements Runnable {
         nextPlayer.sendMessage("TURN " + previousPlayer.getPlayerName() + " " + row + " " + value);
         previousPlayer.sendMessage("WAIT");
         currentPlayer = nextPlayer;  // whose turn
+
     }
 
     private void sendTurn() {
@@ -59,15 +61,12 @@ public class GameRoom implements Runnable {
                         int row = Integer.parseInt(parts[1]);
                         String value = parts.length > 3 ? parts[3] : "0";
 
-                        // refresh the game screen
                         player.sendMessage("LOCK_SCORE " + row + " " + value);
                         getOtherPlayer(player).sendMessage("OPPONENT_LOCKED " + row + " " + value);
 
-                        //  rakip sırası için
                         sendTurn(player, row, Integer.parseInt(value));
                     } else if (line.startsWith("ROLL_DICE ")) {
-                        // rolling player
-                        String diceValues = line.substring("ROLL_DICE ".length()); 
+                        String diceValues = line.substring("ROLL_DICE ".length());
                         getOtherPlayer(player).sendMessage("DICE " + diceValues);
                     } else if (line.startsWith("GAME_OVER")) {
                         int score = Integer.parseInt(line.split(" ")[1]);
@@ -78,14 +77,17 @@ public class GameRoom implements Runnable {
                         }
 
                         if (player1Score != -1 && player2Score != -1) {
-                            sendGameResult(); // if there are 2 players
+                            sendGameResult();
                         }
                     } else if (line.equals("RESTART")) {
-                        MessageServer.registerPlayer(player); // change the order again
+                        MessageServer.registerPlayer(player);
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("Player disconnected: " + player.getPlayerName());
+                PlayerHandler opponent = getOtherPlayer(player);
+                opponent.sendMessage("GAME_RESULT WIN 0"); 
+                MessageServer.removePlayer(player.getPlayerName());
             }
         }).start();
     }

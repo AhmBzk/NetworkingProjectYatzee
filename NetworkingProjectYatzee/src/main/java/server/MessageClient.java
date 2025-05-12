@@ -30,7 +30,7 @@ public class MessageClient {
 
     public MessageClient(String serverAddress, GUILogin loginUI) throws IOException {
         this.loginUI = loginUI;
-        serverAddress = "13.50.16.245";
+        //serverAddress = "13.50.16.245";
         socket = new Socket(serverAddress, 5000);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);

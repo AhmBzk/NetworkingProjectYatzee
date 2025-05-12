@@ -55,6 +55,7 @@ public class MessageServer {
             new Thread(room).start();
         }
     }
+    
 
     public static synchronized void removePlayer(String name) {
         playerNames.remove(name);
