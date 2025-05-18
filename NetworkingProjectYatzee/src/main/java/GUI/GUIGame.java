@@ -150,8 +150,8 @@ public class GUIGame extends javax.swing.JFrame {
         URL url = getClass().getResource(path);
 
         if (url == null) {
-            System.err.println("Görsel bulunamadı: " + path);
-            return new ImageIcon(); // Boş ikon döner
+            System.err.println("Image not found " + path);
+            return new ImageIcon();
         }
 
         ImageIcon icon = new ImageIcon(url);

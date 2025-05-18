@@ -4,8 +4,11 @@
  */
 package GUI;
 
+import java.awt.Image;
 import java.io.IOException;
+import java.net.URL;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -24,17 +27,29 @@ public class GUILogin extends JFrame {
 
     private MessageClient client;
     private WaitingRoom waitingRoom;
+    private String IP;
+    ImageIcon icon = new ImageIcon(getClass().getResource("/dicefire.png"));
+    Image scaledImage = icon.getImage().getScaledInstance(32, 32, Image.SCALE_SMOOTH);
+
     public GUILogin() {
         initComponents();
+        jLabel3.setIcon(getScaledIcon("/dicefire.png", 32, 32));
 
-        try {
-            client = new MessageClient("localhost", this);
-        } catch (IOException e) {
-            jLabel1.setText("Server connection failed.");
-        }
+        IP = jTextIP.getText();
 
         setVisible(true);
     }
+
+    private void connect(String IP) {
+        
+        try {
+            client = new MessageClient(IP, this);
+        } catch (IOException e) {
+            jLabel1.setText("Server connection failed.");
+        }
+    }
+
+    ;
 
     public void requestName() {
         SwingUtilities.invokeLater(() -> jLabel1.setText("Please enter your name"));
@@ -61,6 +76,26 @@ public class GUILogin extends JFrame {
         this.setVisible(false); // closing the login screen
     }
 
+    public ImageIcon getScaledIcon(String path, int width, int height) {
+        javax.swing.Timer timer = new javax.swing.Timer(10, event -> {
+        });
+        timer.setRepeats(false);
+        timer.start();
+        URL url = getClass().getResource(path);
+
+        if (url == null) {
+            System.err.println("Image not found " + path);
+            return new ImageIcon();
+        }
+
+        ImageIcon icon = new ImageIcon(url);
+
+        Image scaledImage = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+
+        return new ImageIcon(scaledImage);
+
+    }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -73,6 +108,9 @@ public class GUILogin extends JFrame {
         jLabel1 = new javax.swing.JLabel();
         jTextField1 = new javax.swing.JTextField();
         jButton2 = new javax.swing.JButton();
+        jTextIP = new javax.swing.JTextField();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -91,6 +129,12 @@ public class GUILogin extends JFrame {
             }
         });
 
+        jTextIP.setText("13.51.241.209");
+
+        jLabel2.setText("SERVER IP :");
+
+        jLabel3.setIcon(new ImageIcon(scaledImage));
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -98,27 +142,38 @@ public class GUILogin extends JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(166, 166, 166)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 98, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(6, 6, 6)
-                                .addComponent(jButton2))))
+                        .addGap(168, 168, 168)
+                        .addComponent(jButton2))
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(85, 85, 85)
-                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 261, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(97, Short.MAX_VALUE))
+                        .addGap(84, 84, 84)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 261, Short.MAX_VALUE)
+                            .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jTextIP, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(184, 184, 184)
+                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(87, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jTextIP, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel2))
+                .addGap(18, 18, 18)
+                .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 36, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
                 .addComponent(jLabel1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton2)
-                .addGap(26, 26, 26))
+                .addContainerGap())
         );
 
         pack();
@@ -129,7 +184,17 @@ public class GUILogin extends JFrame {
     }//GEN-LAST:event_jTextField1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        if(!jTextField1.getText().equals("")){
+            if(!jTextIP.getText().equals("")){
+        connect(IP);
+        }else{
+        connect("localhost");        
+            }
         client.sendName((jTextField1.getText()).trim());
+        }else{
+            jLabel1.setText("Name cannot be null!");
+        }
+
     }//GEN-LAST:event_jButton2ActionPerformed
 
     /**
@@ -166,6 +231,11 @@ public class GUILogin extends JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton2;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     private javax.swing.JTextField jTextField1;
+    private javax.swing.JTextField jTextIP;
     // End of variables declaration//GEN-END:variables
+
+
 }
