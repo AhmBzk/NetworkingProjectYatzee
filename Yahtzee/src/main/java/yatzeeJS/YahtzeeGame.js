@@ -40,7 +40,7 @@ class YahtzeeGame {
       this.buildScoreTable();
       this.statusLabel.textContent = "Game started!";
     } else if (message.startsWith("TURN")) {
-      console.log("🔁 TURN mesajı alındı:", message);
+      console.log("TURN mesajı alındı:", message);
       this.diceButtons.forEach(btn => btn.classList.remove("selected"));
       const playerTurnName = parts[1];
 
@@ -60,7 +60,7 @@ class YahtzeeGame {
           cell.textContent = val;
           cell.style.color = "black";
         }
-        // ✅ Oyun bitiş kontrolü: Total (row 15) her iki oyuncuda da dolduysa, oyunu bitir
+        //  Oyun bitiş kontrolü: Total (row 15) her iki oyuncuda da dolduysa, oyunu bitir
         if (this.lockedRows.size >= 16) {
           const myTotal = document.getElementById("cell-you-15").textContent;
           const oppTotal = document.getElementById("cell-opponent-15").textContent;
@@ -94,7 +94,7 @@ class YahtzeeGame {
 
       const cell = document.getElementById(cellId);
       if (cell) {
-        cell.textContent = val;           // 0 olsa bile yaz
+        cell.textContent = val;          
         cell.style.color = "black";
         if (player === this.playerName) this.lockedRows.add(row);
       }
@@ -119,11 +119,11 @@ class YahtzeeGame {
       let messageText = "";
 
       if (result === "WIN") {
-        messageText = `🎉 You win! Your final score: ${finalScore}`;
+        messageText = `You win! Your final score: ${finalScore}`;
       } else if (result === "LOSE") {
-        messageText = `😢 You lost. Opponent's score: ${finalScore}`;
+        messageText = `You lost. Opponent's score: ${finalScore}`;
       } else {
-        messageText = `🤝 It's a draw! Both scored: ${finalScore}`;
+        messageText = `It's a draw! Both scored: ${finalScore}`;
       }
 
       // Show restart prompt
