@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Yahtzee Login</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+
+    .login-container {
+      background: white;
+      padding: 20px 40px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      font-size: 16px;
+      width: 200px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 10px;
+      color: red;
+    }
+
+    .dice-container img {
+      width: 48px;
+      margin: 4px;
+      border: 2px solid transparent;
+      border-radius: 5px;
+    }
+
+    .dice-container img.selected {
+      border: 2px solid red;
+      box-shadow: 0 0 5px red;
+      transform: scale(1.1);
+    }
+
+    .score-table {
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+
+    .score-table th,
+    .score-table td {
+      border: 1px solid black;
+      padding: 5px 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <h2>Yahtzee Web Login</h2>
+    <label>Player Name:</label>
+    <input type="text" id="loginName">
+    <label>Server IP:</label>
+    <input type="text" id="loginIP" value="localhost">
+    <button onclick="login()">Connect</button>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    
+    function buildScoreTable() {
+      const tbody = document.getElementById("scoreBody");
+      const categories = [
+        "Ones", "Twos", "Threes", "Fours", "Fives", "Sixes",
+        "Bonus", "Sum", "Three of a kind", "Four of a kind",
+        "Full house", "Small straight", "Large straight", "Chance", "YAHTZEE", "Total"
+      ];
+      categories.forEach((cat, i) => {
+        const row = document.createElement("tr");
+        const catCell = document.createElement("td");
+        const youCell = document.createElement("td");
+        const oppCell = document.createElement("td");
+
+        catCell.textContent = cat;
+        youCell.id = `cell-you-${i}`;
+        oppCell.id = `cell-opponent-${i}`;
+
+        row.appendChild(catCell);
+        row.appendChild(youCell);
+        row.appendChild(oppCell);
+        tbody.appendChild(row);
+      });
+    }
+
+
+
+    function login() {
+      const name = document.getElementById("loginName").value.trim();
+      const ip = document.getElementById("loginIP").value.trim() || "localhost";
+      const status = document.getElementById("status");
+
+      if (!name) {
+        status.textContent = "Name cannot be empty.";
+        return;
+      }
+
+      const socket = new WebSocket("ws://" + ip + ":8887");
+
+      socket.onopen = () => {
+        if (name.length < 3 || name.length > 20) {
+          status.textContent = "Name must be between 3 and 20 characters.";
+          socket.close();
+          return;
+        }
+        status.textContent = "Connected to server. Waiting...";
+        socket.send("NAME " + name);
+      };
+
+      socket.onmessage = (event) => {
+        if (event.data === "NAME_ACCEPTED") {
+          document.body.innerHTML = `
+            <h2>Yahtzee Game</h2>
+            <div id="status" style="color: red;">Starting...</div>
+            <div class="dice-container">
+              <img id="dice1" src="dice1.png">
+              <img id="dice2" src="dice1.png">
+              <img id="dice3" src="dice1.png">
+              <img id="dice4" src="dice1.png">
+              <img id="dice5" src="dice1.png">
+            </div>
+            <button id="rollBtn">ROLL</button>
+            <table class="score-table" id="scoreTable">
+              <thead>
+                <tr><th>Category</th><th>You</th><th>Opponent</th></tr>
+              </thead>
+              <tbody id="scoreBody"></tbody>
+            </table>
+          `;
+          buildScoreTable();
+          import('./YahtzeeGame.js')
+            .then(module => {
+              const YahtzeeGame = module.default;
+              new YahtzeeGame(socket, name, "Opponent");
+            })
+            .catch(err => {
+              console.error("YahtzeeGame.js loading failed:", err);
+            });
+        } else if (event.data === "NAME_TAKEN") {
+          status.textContent = "Name taken. Try another.";
+        } else if (event.data === "REQUEST_NAME") {
+          socket.send("NAME " + name);
+        }
+      };
+
+      socket.onerror = () => {
+        status.textContent = "Connection failed.";
+      };
+    }
+  </script>
+</body>
+
+</html>
